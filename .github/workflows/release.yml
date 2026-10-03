@@ -1,0 +1,51 @@
+# Veröffentlicht das Plugin bei einem Tag vX.Y.Z als GitHub-Release.
+#
+# Sodala liest den Feed über die feste Adresse
+#   https://github.com/<owner>/<repo>/releases/latest/download/latest.json
+# und lädt das Paket von der Adresse, die im Feed steht. Signiert wird mit dem
+# Plugin-Schlüssel aus dem Secret SODALA_PLUGIN_SIGNING_KEY (scripts/create-plugin-key.sh).
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag gegen plugin.json prüfen
+        run: |
+          VERSION=$(python3 -c 'import json; print(json.load(open("plugin/plugin.json"))["version"])')
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME passt nicht zu version $VERSION in plugin/plugin.json" >&2
+            exit 1
+          fi
+
+      - name: Bauen und signieren
+        env:
+          SODALA_PLUGIN_SIGNING_KEY: ${{ secrets.SODALA_PLUGIN_SIGNING_KEY }}
+        run: |
+          if [ -z "$SODALA_PLUGIN_SIGNING_KEY" ]; then
+            echo "Secret SODALA_PLUGIN_SIGNING_KEY fehlt (Settings > Secrets and variables > Actions)." >&2
+            exit 1
+          fi
+          scripts/release-plugin.sh plugin \
+            --base-url "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME"
+
+      # Erst als Entwurf mit beiden Dateien anlegen, dann veröffentlichen: So zeigt
+      # "latest" nie auf ein Release, dem latest.json oder das Paket noch fehlt.
+      - name: Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ID=$(python3 -c 'import json; print(json.load(open("plugin/plugin.json"))["id"])')
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --notes "Version $VERSION" \
+            "build/plugins/$ID/latest.json" "build/plugins/$ID/$ID-$VERSION.sodalaplugin"
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest
