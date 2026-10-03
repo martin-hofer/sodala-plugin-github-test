@@ -28,4 +28,4 @@ if count != 1:
 with open(html_path, "w") as f:
     f.write(html)
 PY
-echo "Version $VERSION gesetzt. Veröffentlichen: git commit -am \"v$VERSION\" && git tag v$VERSION && git push --follow-tags"
+echo "Version $VERSION gesetzt. Veröffentlichen: git commit -am \"v$VERSION\" && git tag -a v$VERSION -m v$VERSION && git push --follow-tags"
