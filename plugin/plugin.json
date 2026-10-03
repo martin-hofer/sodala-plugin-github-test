@@ -1,7 +1,7 @@
 {
   "id": "com.proudcommerce.github-test",
   "name": "GitHub-Test",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "author": "ProudCommerce",
   "apiVersion": 1,
   "description": "Test-Plugin für automatische Updates aus GitHub-Releases (F166).",
